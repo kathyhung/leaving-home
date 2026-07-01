@@ -81,7 +81,7 @@ function etaLabel(timestamp: number, now: number, language: Language) {
   const minutes = Math.ceil((timestamp - now) / 60_000);
   if (minutes < -1) return null;
   if (minutes <= 1) return language === "tc" ? "即將抵達" : "Due";
-  return language === "tc" ? `${minutes} 分` : `${minutes} min`;
+  return language === "tc" ? `${minutes} 分鐘` : `${minutes} min`;
 }
 
 export default function BusBoard() {
@@ -495,7 +495,11 @@ export default function BusBoard() {
                 <article className="journey-row" key={journey.id}>
                   <div className={`route-badge ${journey.operator.toLowerCase()}`}>
                     <span>{journey.operator === "KMB" ? "KMB" : "CTB"}</span>
-                    <strong>{journey.route}</strong>
+                    <strong
+                      className={journey.route.length > 3 ? "long-route-number" : undefined}
+                    >
+                      {journey.route}
+                    </strong>
                   </div>
 
                   <div className="journey-copy">
@@ -518,14 +522,16 @@ export default function BusBoard() {
                       visibleRecords.map((record, index) => {
                         const label = etaLabel(record.timestamp, now, language);
                         if (!label) return null;
-                        const scheduled = (record.remarkEn || record.remarkTc)
-                          .toLocaleLowerCase()
-                          .includes("scheduled");
+                        const remarks = `${record.remarkEn} ${record.remarkTc}`
+                          .trim()
+                          .toLocaleLowerCase();
+                        const scheduled =
+                          remarks.includes("scheduled") || remarks.includes("預定");
                         return (
                           <div className={`eta ${index === 0 ? "next" : ""}`} key={`${record.timestamp}-${index}`}>
                             <strong>{label}</strong>
                             <span>{formatClock(record.timestamp, language)}</span>
-                            {scheduled && <em>{language === "tc" ? "班次" : "scheduled"}</em>}
+                            {scheduled && <em>{language === "tc" ? "預定班次" : "Scheduled"}</em>}
                           </div>
                         );
                       })

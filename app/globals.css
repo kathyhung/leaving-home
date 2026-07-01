@@ -455,6 +455,12 @@ input:focus-visible {
   white-space: nowrap;
 }
 
+.route-badge strong.long-route-number {
+  padding-inline: 6px;
+  font-size: clamp(1.95rem, 3.7vw, 3.9rem);
+  letter-spacing: -0.085em;
+}
+
 .journey-copy {
   display: flex;
   min-width: 0;
@@ -1253,6 +1259,10 @@ input:focus-visible {
     font-size: clamp(2rem, 8vw, 3.4rem);
   }
 
+  .route-badge strong.long-route-number {
+    font-size: clamp(1.35rem, 5vw, 2rem);
+  }
+
   .journey-copy {
     min-height: 104px;
     padding: 16px 18px;
@@ -1345,6 +1355,10 @@ input:focus-visible {
 
   .route-badge strong {
     font-size: 1.8rem;
+  }
+
+  .route-badge strong.long-route-number {
+    font-size: 1.4rem;
   }
 
   .journey-copy {
