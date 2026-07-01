@@ -80,7 +80,7 @@ function stopName(journey: FavouriteJourney, language: Language) {
 function etaLabel(timestamp: number, now: number, language: Language) {
   const minutes = Math.ceil((timestamp - now) / 60_000);
   if (minutes < -1) return null;
-  if (minutes <= 1) return language === "tc" ? "即將抵達" : "Due";
+  if (minutes <= 1) return language === "tc" ? "即將抵達" : "Arriving";
   return language === "tc" ? `${minutes} 分鐘` : `${minutes} min`;
 }
 
@@ -530,8 +530,12 @@ export default function BusBoard() {
                         return (
                           <div className={`eta ${index === 0 ? "next" : ""}`} key={`${record.timestamp}-${index}`}>
                             <strong>{label}</strong>
-                            <span>{formatClock(record.timestamp, language)}</span>
-                            {scheduled && <em>{language === "tc" ? "預定班次" : "Scheduled"}</em>}
+                            <span className="eta-time">
+                              {formatClock(record.timestamp, language)}
+                              {scheduled && (
+                                <em>({language === "tc" ? "預定班次" : "SCHEDULED"})</em>
+                              )}
+                            </span>
                           </div>
                         );
                       })
