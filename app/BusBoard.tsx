@@ -33,7 +33,27 @@ interface InstallPromptEvent extends Event {
   userChoice: Promise<{ outcome: "accepted" | "dismissed" }>;
 }
 
+interface NavigatorWithStandalone extends Navigator {
+  standalone?: boolean;
+}
+
+type InstallPlatform = "ios" | "android" | "other";
 type EtaMap = Record<string, JourneyEtaState>;
+
+function detectInstallPlatform(): InstallPlatform {
+  const userAgent = navigator.userAgent;
+  const iPadOs = navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1;
+  if (/iPhone|iPad|iPod/i.test(userAgent) || iPadOs) return "ios";
+  if (/Android/i.test(userAgent)) return "android";
+  return "other";
+}
+
+function isInstalledApp() {
+  return (
+    window.matchMedia("(display-mode: standalone)").matches ||
+    Boolean((navigator as NavigatorWithStandalone).standalone)
+  );
+}
 
 function parseStored<T>(key: string, fallback: T): T {
   try {
@@ -96,6 +116,8 @@ export default function BusBoard() {
   const [wakeActive, setWakeActive] = useState(false);
   const [installPrompt, setInstallPrompt] =
     useState<InstallPromptEvent | null>(null);
+  const [installHelp, setInstallHelp] = useState<InstallPlatform | null>(null);
+  const [appInstalled, setAppInstalled] = useState(false);
   const [notice, setNotice] = useState("");
   const wakeLockRef = useRef<WakeLockHandle | null>(null);
 
@@ -161,16 +183,27 @@ export default function BusBoard() {
   }, []);
 
   useEffect(() => {
+    const displayMode = window.matchMedia("(display-mode: standalone)");
     const handler = (event: Event) => {
       event.preventDefault();
       setInstallPrompt(event as InstallPromptEvent);
     };
-    const installed = () => setInstallPrompt(null);
+    const updateInstalledState = () => setAppInstalled(isInstalledApp());
+    const installed = () => {
+      setInstallPrompt(null);
+      setInstallHelp(null);
+      setAppInstalled(true);
+      setNotice("My Next Bus is installed.");
+    };
+
+    updateInstalledState();
     window.addEventListener("beforeinstallprompt", handler);
     window.addEventListener("appinstalled", installed);
+    displayMode.addEventListener("change", updateInstalledState);
     return () => {
       window.removeEventListener("beforeinstallprompt", handler);
       window.removeEventListener("appinstalled", installed);
+      displayMode.removeEventListener("change", updateInstalledState);
     };
   }, []);
 
@@ -335,10 +368,22 @@ export default function BusBoard() {
   }
 
   async function installApp() {
-    if (!installPrompt) return;
-    await installPrompt.prompt();
-    await installPrompt.userChoice;
-    setInstallPrompt(null);
+    if (appInstalled) {
+      setNotice("My Next Bus is already installed on this device.");
+      return;
+    }
+
+    if (installPrompt) {
+      await installPrompt.prompt();
+      const choice = await installPrompt.userChoice;
+      setInstallPrompt(null);
+      if (choice.outcome === "dismissed") {
+        setNotice("Installation was cancelled. Tap Install whenever you are ready.");
+      }
+      return;
+    }
+
+    setInstallHelp(detectInstallPlatform());
   }
 
   function addFavourite(journey: FavouriteJourney) {
@@ -422,18 +467,19 @@ export default function BusBoard() {
               中文
             </button>
           </div>
-          {installPrompt && (
-            <button
-              className="action-button install"
-              type="button"
-              aria-label="Install app"
-              title="Install app"
-              onClick={installApp}
-            >
-              <span className="action-symbol" aria-hidden="true">↓</span>
-              <span className="action-label">Install</span>
-            </button>
-          )}
+          <button
+            className={`action-button install ${appInstalled ? "active" : ""}`}
+            type="button"
+            aria-label={appInstalled ? "My Next Bus is installed" : "Install My Next Bus"}
+            title={appInstalled ? "My Next Bus is installed" : "Install My Next Bus"}
+            aria-pressed={appInstalled}
+            onClick={installApp}
+          >
+            <span className="action-symbol" aria-hidden="true">
+              {appInstalled ? "✓" : "↓"}
+            </span>
+            <span className="action-label">{appInstalled ? "Installed" : "Install"}</span>
+          </button>
           <button
             className={`action-button ${wakeActive ? "active" : ""}`}
             type="button"
@@ -603,6 +649,114 @@ export default function BusBoard() {
       </footer>
 
       {notice && <div className="toast" role="status">{notice}</div>}
+
+      {installHelp && (
+        <div
+          className="install-backdrop"
+          role="presentation"
+          onClick={() => setInstallHelp(null)}
+        >
+          <section
+            className="install-sheet"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="install-title"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <header className="install-sheet-header">
+              <div>
+                <p className="eyebrow">Add to your phone</p>
+                <h2 id="install-title">
+                  {installHelp === "ios"
+                    ? "Install on iPhone"
+                    : installHelp === "android"
+                      ? "Install on Android"
+                      : "Install My Next Bus"}
+                </h2>
+              </div>
+              <button
+                className="icon-button"
+                type="button"
+                aria-label="Close install instructions"
+                onClick={() => setInstallHelp(null)}
+              >
+                <span aria-hidden="true">×</span>
+              </button>
+            </header>
+
+            <p className="install-sheet-copy">
+              {installHelp === "ios"
+                ? "iPhone installs web apps from the browser Share menu."
+                : installHelp === "android"
+                  ? "If Chrome's automatic prompt is unavailable, install from its menu."
+                  : "Use your browser menu to add this app to your home screen."}
+            </p>
+
+            <ol className="install-steps">
+              {installHelp === "ios" ? (
+                <>
+                  <li>
+                    <span>1</span>
+                    <div><strong>Open this page in Safari</strong><small>Use Safari rather than an in-app browser.</small></div>
+                  </li>
+                  <li>
+                    <span>2</span>
+                    <div><strong>Tap the Share button</strong><small>It looks like a square with an upward arrow.</small></div>
+                  </li>
+                  <li>
+                    <span>3</span>
+                    <div><strong>Choose Add to Home Screen</strong><small>Scroll down if the option is not immediately visible.</small></div>
+                  </li>
+                  <li>
+                    <span>4</span>
+                    <div><strong>Tap Add</strong><small>My Next Bus will appear on your home screen.</small></div>
+                  </li>
+                </>
+              ) : installHelp === "android" ? (
+                <>
+                  <li>
+                    <span>1</span>
+                    <div><strong>Open this page in Chrome</strong><small>Avoid opening it inside a messaging or social app.</small></div>
+                  </li>
+                  <li>
+                    <span>2</span>
+                    <div><strong>Tap Chrome’s ⋮ menu</strong><small>The menu is usually at the top-right.</small></div>
+                  </li>
+                  <li>
+                    <span>3</span>
+                    <div><strong>Choose Install app</strong><small>It may instead say Add to Home screen.</small></div>
+                  </li>
+                  <li>
+                    <span>4</span>
+                    <div><strong>Confirm Install</strong><small>Launch My Next Bus from its new icon.</small></div>
+                  </li>
+                </>
+              ) : (
+                <>
+                  <li>
+                    <span>1</span>
+                    <div><strong>Open your browser menu</strong><small>Look for an install or app option.</small></div>
+                  </li>
+                  <li>
+                    <span>2</span>
+                    <div><strong>Choose Install app</strong><small>The wording may be Add to Home screen.</small></div>
+                  </li>
+                </>
+              )}
+            </ol>
+
+            <footer className="install-sheet-footer">
+              <button
+                className="primary-button"
+                type="button"
+                onClick={() => setInstallHelp(null)}
+              >
+                Got it
+              </button>
+            </footer>
+          </section>
+        </div>
+      )}
 
       {setupOpen && (
         <SetupPanel
