@@ -67,13 +67,16 @@ input:focus-visible {
 
 .board-shell {
   position: relative;
-  min-height: 100dvh;
-  overflow-x: hidden;
+  display: grid;
+  height: 100dvh;
+  min-height: 0;
+  grid-template-rows: auto auto minmax(0, 1fr) auto;
+  overflow: hidden;
   background:
     radial-gradient(circle at 88% -12%, rgba(247, 179, 43, 0.13), transparent 34rem),
     linear-gradient(145deg, var(--night), var(--night-deep));
   padding: env(safe-area-inset-top) env(safe-area-inset-right)
-    calc(52px + env(safe-area-inset-bottom)) env(safe-area-inset-left);
+    calc(54px + env(safe-area-inset-bottom)) env(safe-area-inset-left);
 }
 
 .board-shell::before {
@@ -383,9 +386,12 @@ input:focus-visible {
 
 .arrival-board {
   width: min(1520px, 100%);
-  min-height: calc(100dvh - 208px);
+  min-height: 0;
   margin: 0 auto;
+  overflow-y: auto;
+  overscroll-behavior: contain;
   padding: clamp(14px, 2.4vw, 34px) clamp(16px, 3vw, 46px);
+  scrollbar-color: rgba(247, 179, 43, 0.4) transparent;
 }
 
 .journey-list {
@@ -397,7 +403,7 @@ input:focus-visible {
   position: relative;
   display: grid;
   grid-template-columns: clamp(118px, 13vw, 170px) minmax(250px, 0.9fr) minmax(430px, 1.45fr);
-  min-height: clamp(128px, 15vh, 176px);
+  min-height: clamp(88px, 10vh, 116px);
   overflow: hidden;
   border: 1px solid var(--line);
   border-radius: var(--radius);
@@ -472,12 +478,20 @@ input:focus-visible {
   min-width: 0;
   justify-content: center;
   flex-direction: column;
-  padding: 22px clamp(20px, 2.4vw, 38px);
+  padding: 12px clamp(18px, 2.2vw, 32px);
   border-right: 1px solid var(--line);
 }
 
+.destination-line {
+  display: flex;
+  min-width: 0;
+  align-items: baseline;
+  gap: 9px;
+}
+
 .destination-prefix {
-  margin: 0 0 5px;
+  flex: 0 0 auto;
+  margin: 0;
   color: var(--amber-soft);
   font-size: 0.65rem;
   font-weight: 900;
@@ -488,7 +502,8 @@ input:focus-visible {
   display: -webkit-box;
   overflow: hidden;
   margin: 0;
-  font-size: clamp(1.28rem, 2.2vw, 2.25rem);
+  min-width: 0;
+  font-size: clamp(1.16rem, 1.9vw, 1.9rem);
   line-height: 1.08;
   letter-spacing: -0.035em;
   -webkit-box-orient: vertical;
@@ -497,7 +512,7 @@ input:focus-visible {
 
 .stop-name {
   overflow: hidden;
-  margin: 11px 0 0;
+  margin: 6px 0 0;
   color: var(--muted);
   font-size: clamp(0.74rem, 1vw, 0.9rem);
   text-overflow: ellipsis;
@@ -525,7 +540,7 @@ input:focus-visible {
   justify-content: center;
   flex-direction: column;
   gap: 1px;
-  padding: 13px 10px;
+  padding: 8px 9px;
   border-left: 1px solid var(--line);
   color: var(--muted-strong);
   font-variant-numeric: tabular-nums;
@@ -543,7 +558,7 @@ input:focus-visible {
 .eta strong {
   overflow: hidden;
   max-width: 100%;
-  font-size: clamp(1.7rem, 3.9vw, 4.25rem);
+  font-size: clamp(1.55rem, 3.25vw, 3.5rem);
   line-height: 1;
   letter-spacing: -0.065em;
   text-overflow: ellipsis;
@@ -551,7 +566,7 @@ input:focus-visible {
 }
 
 .eta span {
-  margin-top: 8px;
+  margin-top: 4px;
   color: var(--muted);
   font-size: 0.76rem;
   font-weight: 700;
@@ -636,7 +651,7 @@ input:focus-visible {
 
 .empty-board {
   display: flex;
-  min-height: calc(100dvh - 290px);
+  min-height: 100%;
   align-items: center;
   justify-content: center;
   flex-direction: column;
@@ -681,8 +696,10 @@ input:focus-visible {
   min-height: 48px;
   padding: 8px clamp(20px, 3vw, 46px);
   border-top: 1px solid var(--line);
+  background: rgba(6, 15, 27, 0.96);
   color: var(--muted);
   font-size: 0.66rem;
+  backdrop-filter: blur(18px);
 }
 
 .board-footer .text-button {
@@ -786,7 +803,7 @@ input:focus-visible {
   position: fixed;
   z-index: 100;
   right: 22px;
-  bottom: calc(22px + env(safe-area-inset-bottom));
+  bottom: calc(114px + env(safe-area-inset-bottom));
   max-width: min(440px, calc(100vw - 44px));
   padding: 14px 18px;
   border: 1px solid rgba(247, 179, 43, 0.35);
@@ -1635,14 +1652,14 @@ input:focus-visible {
   }
 
   .journey-copy {
-    min-height: 104px;
-    padding: 16px 18px;
+    min-height: 72px;
+    padding: 10px 16px;
     border-right: 0;
     border-bottom: 1px solid var(--line);
   }
 
   .etas {
-    min-height: 104px;
+    min-height: 72px;
   }
 
   .eta strong {
@@ -1782,7 +1799,6 @@ input:focus-visible {
   }
 
   .arrival-board {
-    min-height: calc(100dvh - 160px);
     padding: 8px;
   }
 
@@ -1798,7 +1814,7 @@ input:focus-visible {
 
   .route-badge {
     grid-row: 1;
-    min-height: 76px;
+    min-height: 54px;
     border-right: 1px solid rgba(255, 255, 255, 0.18);
     border-bottom: 0;
   }
@@ -1818,44 +1834,47 @@ input:focus-visible {
   }
 
   .journey-copy {
-    min-height: 76px;
-    padding: 10px 12px;
+    min-height: 54px;
+    padding: 6px 10px;
     border-bottom: 0;
   }
 
+  .destination-line {
+    gap: 6px;
+  }
+
   .destination-prefix {
-    margin-bottom: 3px;
     font-size: 0.55rem;
   }
 
   .journey-copy h2 {
-    font-size: 1.06rem;
+    font-size: 0.98rem;
     line-height: 1.05;
   }
 
   .stop-name {
-    margin-top: 6px;
-    font-size: 0.7rem;
+    margin-top: 4px;
+    font-size: 0.66rem;
   }
 
   .etas {
     grid-column: 1 / -1;
-    min-height: 76px;
+    min-height: 54px;
     border-top: 1px solid var(--line);
   }
 
   .eta {
-    min-height: 76px;
-    padding: 8px 4px;
+    min-height: 54px;
+    padding: 5px 4px;
   }
 
   .eta strong {
-    font-size: clamp(1.15rem, 5.6vw, 1.55rem);
+    font-size: clamp(1.05rem, 5vw, 1.4rem);
   }
 
   .eta span {
-    margin-top: 5px;
-    font-size: 0.65rem;
+    margin-top: 2px;
+    font-size: 0.61rem;
   }
 
   .eta em {
@@ -1872,7 +1891,7 @@ input:focus-visible {
 
   .no-arrivals {
     grid-column: 1 / -1;
-    min-height: 76px;
+    min-height: 54px;
   }
 
   .row-warning {
@@ -1894,7 +1913,7 @@ input:focus-visible {
   }
 
   .empty-board {
-    min-height: calc(100dvh - 210px);
+    min-height: 100%;
     padding: 20px 10px;
   }
 
@@ -1918,7 +1937,7 @@ input:focus-visible {
 
   .toast {
     right: 10px;
-    bottom: calc(62px + env(safe-area-inset-bottom));
+    bottom: calc(104px + env(safe-area-inset-bottom));
     left: 10px;
     max-width: none;
   }
@@ -2210,7 +2229,7 @@ input:focus-visible {
 
   .route-badge,
   .journey-copy {
-    min-height: 70px;
+    min-height: 52px;
   }
 
   .route-badge strong {
@@ -2222,17 +2241,17 @@ input:focus-visible {
   }
 
   .journey-copy {
-    padding: 9px 10px;
+    padding: 5px 9px;
   }
 
   .journey-copy h2 {
-    font-size: 0.98rem;
+    font-size: 0.92rem;
   }
 
   .etas,
   .eta,
   .no-arrivals {
-    min-height: 72px;
+    min-height: 52px;
   }
 
   .eta strong {

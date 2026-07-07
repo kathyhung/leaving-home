@@ -792,10 +792,12 @@ export default function BusBoard() {
                   </div>
 
                   <div className="journey-copy">
-                    <p className="destination-prefix">
-                      {language === "tc" ? "往" : "TO"}
-                    </p>
-                    <h2>{destination(journey, language)}</h2>
+                    <div className="destination-line">
+                      <p className="destination-prefix">
+                        {language === "tc" ? "往" : "TO"}
+                      </p>
+                      <h2>{destination(journey, language)}</h2>
+                    </div>
                     <p className="stop-name">
                       <span aria-hidden="true">●</span> {stopName(journey, language)}
                     </p>
