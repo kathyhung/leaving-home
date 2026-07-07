@@ -145,6 +145,9 @@ export default function BusBoard() {
   const [sheetCreatorOpen, setSheetCreatorOpen] = useState(false);
   const [newSheetName, setNewSheetName] = useState("");
   const [sheetNameError, setSheetNameError] = useState("");
+  const [sheetManagerOpen, setSheetManagerOpen] = useState(false);
+  const [sheetDrafts, setSheetDrafts] = useState<RouteSheet[]>([]);
+  const [sheetManagerError, setSheetManagerError] = useState("");
   const [etaByJourney, setEtaByJourney] = useState<EtaMap>({});
   const [language, setLanguage] = useState<Language>("en");
   const [setupOpen, setSetupOpen] = useState(false);
@@ -492,7 +495,91 @@ export default function BusBoard() {
   function openSheetCreator() {
     setNewSheetName("");
     setSheetNameError("");
+    setSheetManagerOpen(false);
     setSheetCreatorOpen(true);
+  }
+
+  function openSheetManager() {
+    setSheetDrafts(
+      sheets.map((sheet) => ({ ...sheet, journeys: [...sheet.journeys] })),
+    );
+    setSheetManagerError("");
+    setSheetCreatorOpen(false);
+    setSheetManagerOpen(true);
+  }
+
+  function renameSheetDraft(sheetId: string, name: string) {
+    setSheetDrafts((current) =>
+      current.map((sheet) =>
+        sheet.id === sheetId
+          ? { ...sheet, name: name.toUpperCase().slice(0, 6) }
+          : sheet,
+      ),
+    );
+    setSheetManagerError("");
+  }
+
+  function moveSheetDraft(sheetId: string, offset: -1 | 1) {
+    setSheetDrafts((current) => {
+      const index = current.findIndex((sheet) => sheet.id === sheetId);
+      const target = index + offset;
+      if (index < 0 || target < 0 || target >= current.length) return current;
+      const next = [...current];
+      [next[index], next[target]] = [next[target], next[index]];
+      return next;
+    });
+  }
+
+  function deleteSheetDraft(sheetId: string) {
+    setSheetDrafts((current) =>
+      current.length <= 1
+        ? current
+        : current.filter((sheet) => sheet.id !== sheetId),
+    );
+    setSheetManagerError("");
+  }
+
+  function saveSheetChanges() {
+    const normalized = sheetDrafts.map((sheet) => ({
+      ...sheet,
+      name: sheet.name.trim().toUpperCase(),
+    }));
+    if (normalized.some((sheet) => !sheet.name)) {
+      setSheetManagerError("Every sheet needs a name.");
+      return;
+    }
+    if (normalized.some((sheet) => sheet.name.length > 6)) {
+      setSheetManagerError("Sheet names must use no more than 6 characters.");
+      return;
+    }
+    const uniqueNames = new Set(normalized.map((sheet) => sheet.name));
+    if (uniqueNames.size !== normalized.length) {
+      setSheetManagerError("Each sheet needs a unique name.");
+      return;
+    }
+
+    const previousActiveIndex = Math.max(
+      0,
+      sheets.findIndex((sheet) => sheet.id === activeSheetId),
+    );
+    const nextActiveSheet =
+      normalized.find((sheet) => sheet.id === activeSheetId) ??
+      normalized[Math.min(previousActiveIndex, normalized.length - 1)] ??
+      normalized[0];
+    const retainedJourneyIds = new Set(
+      normalized.flatMap((sheet) => sheet.journeys.map((journey) => journey.id)),
+    );
+
+    setSheets(normalized);
+    setActiveSheetId(nextActiveSheet.id);
+    setEtaByJourney((current) =>
+      Object.fromEntries(
+        Object.entries(current).filter(([id]) => retainedJourneyIds.has(id)),
+      ),
+    );
+    setSheetManagerOpen(false);
+    setSetupOpen(false);
+    setNotice("Sheet changes saved.");
   }
 
   function createSheet(event: FormEvent<HTMLFormElement>) {
@@ -779,6 +866,15 @@ export default function BusBoard() {
       </footer>
 
       <nav className="sheet-bar" aria-label="Bus route sheets">
+        <button
+          className="sheet-settings"
+          type="button"
+          aria-label="Manage sheets"
+          title="Manage sheets"
+          onClick={openSheetManager}
+        >
+          <span aria-hidden="true">⚙</span>
+        </button>
         <div className="sheet-tabs" role="tablist" aria-label="Bus route sheets">
           {sheets.map((sheet) => (
             <button
@@ -879,6 +975,122 @@ export default function BusBoard() {
                 </button>
               </footer>
             </form>
+          </section>
+        </div>
+      )}
+
+      {sheetManagerOpen && (
+        <div
+          className="sheet-dialog-backdrop"
+          role="presentation"
+          onClick={() => setSheetManagerOpen(false)}
+        >
+          <section
+            className="sheet-dialog sheet-manager"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="sheet-manager-title"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <header className="sheet-dialog-header">
+              <div>
+                <p className="eyebrow">Route groups</p>
+                <h2 id="sheet-manager-title">Manage sheets</h2>
+              </div>
+              <button
+                className="icon-button"
+                type="button"
+                aria-label="Close sheet manager"
+                onClick={() => setSheetManagerOpen(false)}
+              >
+                <span aria-hidden="true">×</span>
+              </button>
+            </header>
+
+            <div className="sheet-manager-body">
+              <p className="sheet-manager-copy">
+                Rename sheets, change their left-to-right order, or delete them.
+                Deleting a sheet also removes all routes saved in it.
+              </p>
+              <div className="sheet-manager-list">
+                {sheetDrafts.map((sheet, index) => (
+                  <div className="sheet-manager-row" key={sheet.id}>
+                    <span className="sheet-manager-position" aria-hidden="true">
+                      {index + 1}
+                    </span>
+                    <div className="sheet-manager-name-wrap">
+                      <label
+                        className="sr-only"
+                        htmlFor={`sheet-manager-name-${sheet.id}`}
+                      >
+                        Sheet {index + 1} name
+                      </label>
+                      <input
+                        id={`sheet-manager-name-${sheet.id}`}
+                        className="search-input sheet-manager-name"
+                        type="text"
+                        autoComplete="off"
+                        maxLength={6}
+                        value={sheet.name}
+                        onChange={(event) =>
+                          renameSheetDraft(sheet.id, event.target.value)
+                        }
+                      />
+                      <small>
+                        {sheet.journeys.length} {sheet.journeys.length === 1 ? "route" : "routes"}
+                      </small>
+                    </div>
+                    <div className="sheet-order-controls">
+                      <button
+                        className="sheet-move-button"
+                        type="button"
+                        disabled={index === 0}
+                        aria-label={`Move ${sheet.name || `sheet ${index + 1}`} left`}
+                        onClick={() => moveSheetDraft(sheet.id, -1)}
+                      >
+                        <span aria-hidden="true">←</span>
+                      </button>
+                      <button
+                        className="sheet-move-button"
+                        type="button"
+                        disabled={index === sheetDrafts.length - 1}
+                        aria-label={`Move ${sheet.name || `sheet ${index + 1}`} right`}
+                        onClick={() => moveSheetDraft(sheet.id, 1)}
+                      >
+                        <span aria-hidden="true">→</span>
+                      </button>
+                    </div>
+                    <button
+                      className="text-button danger sheet-delete-button"
+                      type="button"
+                      disabled={sheetDrafts.length <= 1}
+                      aria-label={`Delete ${sheet.name || `sheet ${index + 1}`}`}
+                      onClick={() => deleteSheetDraft(sheet.id)}
+                    >
+                      Delete
+                    </button>
+                  </div>
+                ))}
+              </div>
+              {sheetManagerError && (
+                <p className="sheet-manager-error" role="alert">
+                  {sheetManagerError}
+                </p>
+              )}
+            </div>
+
+            <footer className="sheet-dialog-actions">
+              <button
+                className="secondary-button"
+                type="button"
+                onClick={() => setSheetManagerOpen(false)}
+              >
+                Cancel
+              </button>
+              <button className="primary-button" type="button" onClick={saveSheetChanges}>
+                Save changes
+              </button>
+            </footer>
           </section>
         </div>
       )}
